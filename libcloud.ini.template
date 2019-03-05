@@ -1,0 +1,15 @@
+# Ansible Apache Libcloud Generic inventory script
+
+[driver]
+provider=ONAPP
+host=cloud.my-onapp-provider.net
+path=/
+secure=True
+verify_ssl_cert=True
+
+key=***
+secret=***
+
+[cache]
+cache_path=~/.ansible/tmp/
+cache_max_age=1

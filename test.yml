@@ -1,0 +1,10 @@
+- hosts: localhost
+  remote_user: root
+  gather_facts: no
+  tasks:
+    - name: Create OnApp VS
+      onapp_vs:
+        name: 'my_virtual_server'
+        new: true
+      register: result
+    - debug: var=result
