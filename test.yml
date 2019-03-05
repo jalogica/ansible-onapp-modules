@@ -1,10 +1,23 @@
 - hosts: localhost
   remote_user: root
   gather_facts: no
+  vars:
+    YOUR_CLOUDFLARE_EMAIL: ''
+    YOUR_CLOUDFLARE_API_KEY: ''
+    YOUR_DNS_ZONE: ''
   tasks:
     - name: Create OnApp VS
       onapp_vs:
         name: 'my_virtual_server'
         new: true
       register: result
+    - name: Register new VS with CloudFlare DNS
+      cloudflare_dns:
+        zone: "{{ YOUR_DNS_ZONE }}"
+        record: "{{ result.hostname }}.afs"
+        type: A
+        value: "{{ result.public_ips|first }}"
+        account_email: "{{ YOUR_CLOUDFLARE_EMAIL }}"
+        account_api_token: "{{ YOUR_CLOUDFLARE_API_KEY }}"
+      register: record
     - debug: var=result

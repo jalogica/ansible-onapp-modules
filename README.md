@@ -15,3 +15,8 @@ cat /tmp/args.json
 >python onapp_vs.py /tmp/args.json
 >ANSIBLE_LIBRARY=. ansible-playbook test.yml
 ```
+
+## Roadmap:
+- make module parameters out of CPU/RAM/Storage
+- use by default private NIC (assign a private IP)
+- refactor result[''] = ... into a function

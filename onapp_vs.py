@@ -115,11 +115,16 @@ def run_module():
     # set max port speed. If none set, the system sets port speed to unlimited
 
 # first check if already exists
-    # module.fail_json(msg=map(lambda x: x.uuid, driver.list_nodes()))
-    node = [n for n in driver.list_nodes() if n.name == name]
+    # module.fail_json(msg=map(lambda x: x.extra, driver.list_nodes()))
+    # node = [     n for n in driver.list_nodes() if n.name == name]
+    node = next((n for n in driver.list_nodes() if n.name == name), None)
     if node:
+        # module.fail_json(msg=node.extra)
         result['changed'] = False
         result['id'] = node.extra['id']
+        result['hostname'] = node.extra['hostname']
+        result['public_ips'] = node.public_ips
+        result['private_ips'] = node.private_ips
         result['state'] = node.extra['state']
         result['strict_virtual_machine_id'] = node.extra['strict_virtual_machine_id']
         result['message'] = 'Virtual server with this name exists already'
