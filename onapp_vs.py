@@ -1,8 +1,20 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+from ansible.module_utils.basic import AnsibleModule
+import os
+import ConfigParser
+from collections import OrderedDict
+try:
+    from libcloud.compute.types import Provider
+    from libcloud.compute.providers import get_driver
+    HAS_LIBCLOUD = True
+except ImportError:
+    HAS_LIBCLOUD = False
+
 # https://docs.onapp.com/55api/virtual-servers
 # https://libcloud.readthedocs.io/en/latest/compute/drivers/onapp.html
+# https://ansible-manual.readthedocs.io/en/stable-2.2/dev_guide/developing_modules.html#module-paths
 
 ANSIBLE_METADATA = {
     'metadata_version': '1.1',
@@ -35,22 +47,13 @@ message:
     description: The output message that the sample module generates
 '''
 
-try:
-    from libcloud.compute.types import Provider
-    from libcloud.compute.providers import get_driver
-    HAS_LIBCLOUD = True
-except ImportError:
-    HAS_LIBCLOUD = False
-
-from ansible.module_utils.basic import AnsibleModule
-import os
-import ConfigParser
 
 def run_module():
     # define available arguments/parameters a user can pass to the module
     module_args = dict(
         name=dict(type='str', required=True),
-        new=dict(type='bool', required=False, default=False)
+        new=dict(type='bool', required=False, default=False),
+        labels=dict(type='dict', required=False, default=None)
     )
 
     # seed the result dict in the object
@@ -78,7 +81,7 @@ def run_module():
     if module.check_mode:
         return result
 
-###begin###################
+# ##begin###################
     #
     # Instantiate driver
     config = ConfigParser.SafeConfigParser()
@@ -105,10 +108,14 @@ def run_module():
     cpu_shares = 100
     # For KVM hypervisor the CPU priority value is always 100. For XEN, set a
     # custom value. The default value for XEN is 1
-    hostname = 'vshostname'  # set the host name for this VS
+    hostname = 'hostname' # module.params['name']  # set the host name for this VS
     template_id = 968  # the ID of a template from which a VS should be built
     primary_disk_size = 10  # set the disk space for this VS
     swap_disk_size = None  # set swap space
+    # tags = {'stack': 'kubernetes', 'layer': 'master', 'environment': 'dev'}
+    labels = module.params['labels']
+    note = ';'.join('{}={}'.format(key, value) for key,
+        value in OrderedDict(sorted(labels.items(), key=lambda t: t[0])).items())
 
     # optional parameter, but recommended
     rate_limit = None
@@ -123,6 +130,8 @@ def run_module():
         result['changed'] = False
         result['id'] = node.extra['id']
         result['hostname'] = node.extra['hostname']
+        result['admin_note'] = node.extra['admin_note']
+        result['note'] = node.extra['note']
         result['public_ips'] = node.public_ips
         result['private_ips'] = node.private_ips
         result['state'] = node.extra['state']
@@ -139,15 +148,17 @@ def run_module():
         ex_template_id=template_id,
         ex_primary_disk_size=primary_disk_size,
         ex_swap_disk_size=swap_disk_size,
-        ex_rate_limit=rate_limit
+        ex_rate_limit=rate_limit,
+        ex_note=note
     )
-###end###################
+# ##end###################
     # manipulate or modify the state as needed (this is going to be the
     # part where your module will do what it needs to do)
     result['original_message'] = module.params['name']
     result['extra'] = '; '.join(node.extra)
     result['uuid'] = node.uuid
     result['admin_note'] = node.extra['admin_note']
+    result['note'] = node.extra['note']
     result['hostname'] = node.extra['hostname']
     result['hypervisor_id'] = node.extra['hypervisor_id']
     result['id'] = node.extra['id']
@@ -171,11 +182,13 @@ def run_module():
     # simple AnsibleModule.exit_json(), passing the key/value results
     module.exit_json(**result)
 
+
 def main():
     if not HAS_LIBCLOUD:
         module.fail_json(msg='This module requires apache-libcloud to work! Please install it with pip install apache-libcloud')
 
     run_module()
+
 
 if __name__ == '__main__':
     main()
