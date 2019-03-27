@@ -1,0 +1,9 @@
+# this playbook will apply to nodes with stack=kubernetes & layer=worker
+---
+- hosts: kubernetes-worker
+  remote_user: root
+  gather_facts: yes
+  tasks:
+    - name: Just ping
+      ping:
+      register: result
