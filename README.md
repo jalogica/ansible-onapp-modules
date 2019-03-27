@@ -25,4 +25,4 @@ ANSIBLE_SSH_ARGS='-o ProxyCommand="ssh -W %h:%p -q root@46.231.178.47"' ansible 
 - make module parameters out of CPU/RAM/Storage
 - use by default private NIC (assign a private IP)
 - refactor result[''] = ... into a function
-- add labels as key/value pairs
+- [x] add labels as key/value pairs

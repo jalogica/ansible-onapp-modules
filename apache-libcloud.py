@@ -96,12 +96,12 @@ class LibcloudInventory(object):
         ''' Reads the settings from the libcloud.ini file '''
 
         config = ConfigParser.SafeConfigParser()
-        libcloud_default_ini_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'libcloud.ini')
-        libcloud_ini_path = os.environ.get('LIBCLOUD_INI_PATH', libcloud_default_ini_path)
+        # libcloud_default_ini_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'libcloud.ini')
+        # libcloud_ini_path = os.environ.get('LIBCLOUD_INI_PATH', libcloud_default_ini_path)
+        libcloud_ini_path = os.path.expanduser("~/.ansible/libcloud.ini")
+        if not os.path.exists(libcloud_ini_path):
+            module.fail_json(msg="Confguration file can't be found ~/.ansible/libcloud.ini")
         config.read(libcloud_ini_path)
-        # print(config)
-        # print(libcloud_default_ini_path)
-        # print(libcloud_ini_path)
 
         if not config.has_section('driver'):
             raise ValueError('libcloud.ini file must contain a [driver] section')
