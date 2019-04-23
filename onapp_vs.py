@@ -53,7 +53,15 @@ def run_module():
     module_args = dict(
         name=dict(type='str', required=True),
         new=dict(type='bool', required=False, default=False),
-        labels=dict(type='dict', required=False, default=None)
+        labels=dict(type='dict', required=False, default=None),
+        memory=dict(type='int', required=True),
+        cpus=dict(type='int', required=True),
+        cpu_shares=dict(type='int', required=False, default=100),
+        hostname=dict(type='str', required=True),
+        template_id=dict(type='int', required=True),
+        primary_disk_size=dict(type='int', required=True),
+        primary_network_id=dict(type='int', required=False),
+        primary_network_group_id=dict(type='int', required=False)
     )
 
     # seed the result dict in the object
@@ -103,20 +111,20 @@ def run_module():
     # Create node
     #
     name = module.params['name']  # user-friendly VS description
-    memory = 512  # amount of RAM assigned to the VS in MB
-    cpus = 1  # number of CPUs assigned to the VS
-    cpu_shares = 100
+    hostname = module.params['hostname']
+    memory = module.params['memory']    # amount of RAM assigned to the VS in MB
+    cpus = module.params['cpus']    # number of CPUs assigned to the VS
+    cpu_shares = module.params['cpu_shares']
     # For KVM hypervisor the CPU priority value is always 100. For XEN, set a
     # custom value. The default value for XEN is 1
-    hostname = 'hostname' # module.params['name']  # set the host name for this VS
-    template_id = 968  # the ID of a template from which a VS should be built
-    primary_disk_size = 10  # set the disk space for this VS
+    template_id = module.params['template_id'] # the ID of a template from which a VS should be built
+    primary_disk_size = module.params['primary_disk_size']
     swap_disk_size = None  # set swap space
-    # tags = {'stack': 'kubernetes', 'layer': 'master', 'environment': 'dev'}
+    primary_network_id = module.params['primary_network_id']
+    primary_network_group_id = module.params['primary_network_group_id']
     labels = module.params['labels']
     note = ';'.join('{}={}'.format(key, value) for key,
         value in OrderedDict(sorted(labels.items(), key=lambda t: t[0])).items())
-
     # optional parameter, but recommended
     rate_limit = None
     # set max port speed. If none set, the system sets port speed to unlimited
@@ -149,7 +157,9 @@ def run_module():
         ex_primary_disk_size=primary_disk_size,
         ex_swap_disk_size=swap_disk_size,
         ex_rate_limit=rate_limit,
-        ex_note=note
+        ex_note=note,
+        ex_primary_network_id=primary_network_id,
+        ex_primary_network_group_id=primary_network_group_id
     )
 # ##end###################
     # manipulate or modify the state as needed (this is going to be the

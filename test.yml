@@ -9,7 +9,14 @@
     - name: Create OnApp VS
       onapp_vs:
         name: 'ansible_module_test'
+        hostname: 'ansiblemoduletest'
         new: true
+        memory: 1024
+        cpus: 1
+        template_id: 751
+        primary_disk_size: 10
+        primary_network_id: 484
+        primary_network_group_id: 537
         labels:
           stack: kubernetes
           layer: master
