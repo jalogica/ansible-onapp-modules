@@ -2,8 +2,17 @@
 ---
 - hosts: kubernetes-worker
   remote_user: root
-  gather_facts: yes
+  gather_facts: no
   tasks:
     - name: Just ping
       ping:
       register: result
+    - name: Run shell Command
+      shell: hostname -i
+    - setup:
+        # gather_subset: [min]
+        gather_subset: [all,'!hardware']
+        gather_timeout: 1
+      register: s
+    - debug: var=s
+    - debug: var=ansible_domain

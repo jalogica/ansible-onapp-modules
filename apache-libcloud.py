@@ -176,7 +176,7 @@ class LibcloudInventory(object):
         '''
         Gets the list of all nodes
         '''
-
+        self.inventory['_meta'] = {"hostvars": {}}
         for node in self.conn.list_nodes():
             self.add_node(node)
 
@@ -202,18 +202,6 @@ class LibcloudInventory(object):
         Adds a node to the inventory and index, as long as it is
         addressable
         '''
-        # print(node.id)
-        # print(node.state == 0)
-        # print(node.public_ips)
-        # print(node.public_ips[0])
-        # Only want running instances
-        # if node.state != 0:
-        #     return
-        # print(node.state == 0)
-        # print(node.extra['note'])
-        # print(self.parse_labels_from(node.extra['note']))
-        # print(self.parse_labels_from('environment=test;layer=master;stack=kubernetes'))
-
         # Select the best destination address
         if not node.public_ips == []:
             dest = node.public_ips[0]
@@ -222,25 +210,26 @@ class LibcloudInventory(object):
         if not dest:
             # Skip instances we cannot address (e.g. private VPC subnet)
             return
-        # print(dest)
         # Add to index
+        self.push_host(self.inventory, 'all', dest)
+
         self.index[dest] = node.name
         # print(self.index)
         # Inventory: Group by instance ID (always a group of 1)
-        self.inventory[node.name] = [dest]
+        # self.inventory[node.name] = [dest]
         labels = self.parse_labels_from(node.extra['note'])
         # Inventory: Group by stack
         if 'stack' in labels:
-            self.push(self.inventory, labels['stack'], dest)
+            self.push_host(self.inventory, labels['stack'], dest)
         # Inventory: Group by layer
         if 'layer' in labels:
-            self.push(self.inventory, labels['layer'], dest)
+            self.push_host(self.inventory, labels['layer'], dest)
         # Inventory: Group by environment
         if 'environment' in labels:
-            self.push(self.inventory, labels['environment'], dest)
+            self.push_host(self.inventory, labels['environment'], dest)
         # Inventory: Group by stack-layer
         if ('stack' in labels) and ('layer' in labels):
-            self.push(self.inventory, labels['stack']+'-'+labels['layer'], dest)
+            self.push_host(self.inventory, labels['stack']+'-'+labels['layer'], dest)
 
         '''
         # Inventory: Group by region
@@ -328,6 +317,15 @@ class LibcloudInventory(object):
             my_dict[key].append(element)
         else:
             my_dict[key] = [element]
+
+    def push_host(self, my_dict, key, element):
+        '''
+        Pushed an element onto an hosts-array that may not have been defined in the dict
+        '''
+        if key in my_dict:
+            my_dict[key]['hosts'].append(element)
+        else:
+            my_dict[key] = {'hosts': [element]}
 
     def get_inventory_from_cache(self):
         '''
