@@ -30,19 +30,16 @@ This script also assumes there is a libcloud.ini file alongside it
 
 '''
 
-import sys
 import os
 import argparse
 import re
 from time import time
 import ConfigParser
+import json
 
 from six import iteritems, string_types
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
-import libcloud.security as sec
-
-import json
 
 
 class LibcloudInventory(object):
@@ -52,6 +49,7 @@ class LibcloudInventory(object):
         # Inventory grouped by instance IDs, tags, security groups, regions,
         # and availability zones
         self.inventory = {}
+        self.hostvars = {}
 
         # Index of hostname (address) to instance ID
         self.index = {}
@@ -77,7 +75,6 @@ class LibcloudInventory(object):
             else:
                 data_to_print = self.json_format_dict(self.inventory, True)
 
-        # print(self.args.list)
         print(data_to_print)
 
     def is_cache_valid(self):
@@ -176,9 +173,10 @@ class LibcloudInventory(object):
         '''
         Gets the list of all nodes
         '''
-        self.inventory['_meta'] = {"hostvars": {}}
+        # self.inventory['_meta'] = {"hostvars": {}}
         for node in self.conn.list_nodes():
             self.add_node(node)
+        self.inventory['_meta'] = {"hostvars": self.hostvars}
 
     def get_node(self, node_id):
         '''
@@ -199,8 +197,7 @@ class LibcloudInventory(object):
 
     def add_node(self, node):
         '''
-        Adds a node to the inventory and index, as long as it is
-        addressable
+        Adds a node to the inventory and index, as long as it is addressable
         '''
         # Select the best destination address
         if not node.public_ips == []:
@@ -208,7 +205,7 @@ class LibcloudInventory(object):
         else:
             dest = node.private_ips[0]
         if not dest:
-            # Skip instances we cannot address (e.g. private VPC subnet)
+            # Skip instances we cannot address
             return
         # Add to index
         self.push_host(self.inventory, 'all', dest)
@@ -218,42 +215,25 @@ class LibcloudInventory(object):
         # Inventory: Group by instance ID (always a group of 1)
         # self.inventory[node.name] = [dest]
         labels = self.parse_labels_from(node.extra['note'])
+
+        # Add all labels as variables
+        for k, v in labels.items():
+            self.push_hostvar(self.hostvars, dest, k, v)
+
         # Inventory: Group by stack
         if 'stack' in labels:
-            self.push_host(self.inventory, labels['stack'], dest)
+            self.push_host(self.inventory, self.to_safe(labels['stack']), dest)
         # Inventory: Group by layer
         if 'layer' in labels:
-            self.push_host(self.inventory, labels['layer'], dest)
+            self.push_host(self.inventory, self.to_safe(labels['layer']), dest)
+
         # Inventory: Group by environment
         if 'environment' in labels:
-            self.push_host(self.inventory, labels['environment'], dest)
+            self.push_host(self.inventory, self.to_safe(labels['environment']), dest)
+
         # Inventory: Group by stack-layer
         if ('stack' in labels) and ('layer' in labels):
-            self.push_host(self.inventory, labels['stack']+'-'+labels['layer'], dest)
-
-        '''
-        # Inventory: Group by region
-        self.push(self.inventory, region, dest)
-
-        # Inventory: Group by availability zone
-        self.push(self.inventory, node.placement, dest)
-
-        # Inventory: Group by instance type
-        self.push(self.inventory, self.to_safe('type_' + node.instance_type), dest)
-        '''
-        # Inventory: Group by key pair
-        # print(node.extra)
-        # if node.extra['key_name']:
-        #     self.push(self.inventory, self.to_safe('key_' + node.extra['key_name']), dest)
-
-        # Inventory: Group by security group, quick thing to handle single sg
-        # if node.extra['security_group']:
-        #     self.push(self.inventory, self.to_safe('sg_' + node.extra['security_group'][0]), dest)
-
-        # Inventory: Group by tag
-        # if node.extra['tags']:
-        #     for tagkey in node.extra['tags'].keys():
-        #         self.push(self.inventory, self.to_safe('tag_' + tagkey + '_' + node.extra['tags'][tagkey]), dest)
+            self.push_host(self.inventory, self.to_safe(labels['stack']+'-'+labels['layer']), dest)
 
     def get_host_info(self):
         '''
@@ -307,16 +287,16 @@ class LibcloudInventory(object):
         print(instance_vars)
         return self.json_format_dict(instance_vars, True)
 
-    def push(self, my_dict, key, element):
+    def push_hostvar(self, my_dict, host, key, value):
         '''
-        Pushed an element onto an array that may not have been defined in
+        Pushed a key/value onto an array that may not have been defined in
         the dict
         '''
 
-        if key in my_dict:
-            my_dict[key].append(element)
+        if host in my_dict:
+            my_dict[host][key] = value
         else:
-            my_dict[key] = [element]
+            my_dict[host] = {key: value}
 
     def push_host(self, my_dict, key, element):
         '''

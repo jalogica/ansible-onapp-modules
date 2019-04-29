@@ -1,6 +1,6 @@
 # this playbook will apply to nodes with stack=kubernetes & layer=worker
 ---
-- hosts: kubernetes-worker
+- hosts: kubernetes-worker:&test
   remote_user: root
   gather_facts: no
   tasks:
@@ -16,3 +16,4 @@
       register: s
     - debug: var=s
     - debug: var=ansible_domain
+    - debug: var=stack
